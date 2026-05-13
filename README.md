@@ -1,57 +1,71 @@
-# LibMS: Advanced Library Management System
+# LibMS (Library Management System)
 
-A high-performance, production-grade Library Management System built with Flask and SQLite. Designed as a comprehensive technical showcase, this project integrates custom Data Structures and Algorithms (DSA) from scratch, robust automated testing, and a fully containerized deployment pipeline.
+A full-stack library management system I built using Python, Flask, and SQLite. The primary goal of this project was to go beyond standard CRUD applications by integrating custom Data Structures and Algorithms (DSA) from scratch to handle real-world system optimization like caching, fast searching, and recommendation engines.
 
-## 🚀 Technical Highlights
+## Technical Deep Dive (Custom DSA)
 
-- **Custom LRU Cache:** Built a custom $O(1)$ Hash Map + Doubly Linked List caching layer for the catalogue, drastically reducing database loads for popular books.
-- **Prefix Trie Autocomplete:** Implemented an in-memory Prefix Trie to power an instant $O(L)$ search dropdown on the frontend without relying on heavy SQL `LIKE` queries.
-- **Graph-Based Recommendations:** A custom Adjacency List graph uses Breadth-First Search (BFS) to traverse book metadata (tags, authors) up to 2 degrees of separation to provide highly accurate book recommendations.
-- **Priority Queue System:** The reservation system operates as a database-backed priority queue, ensuring high-priority users dynamically jump the queue.
-- **Robust Architecture:** Fully Dockerized, comprehensively tested via `pytest`, and governed by a strict GitHub Actions CI/CD pipeline.
+Instead of relying solely on SQL queries or heavy external dependencies, I implemented the following custom features to optimize the application's performance:
 
-## ✨ Core Features
+- **Custom LRU Cache:** 
+  I built a Hash Map combined with a Doubly Linked List to serve as a caching layer for the catalogue. When users browse frequently accessed books, the data is served from memory in $O(1)$ time, drastically reducing the number of database queries.
 
-- **Auth** — Signup, login, bcrypt password hashing, and user role management.
-- **Books** — Browse, search, filter, and sort the entire catalogue.
-- **Issue/Return** — Robust 14-day tracking, renewals, and automated ₹5/day fine calculations.
-- **Reservations** — Queue system for unavailable books that auto-notifies upon return.
-- **Admin Panel** — Comprehensive oversight to manage books, users, returns, and system health.
-- **Activity Log** — Full audit trail of user actions.
+- **Prefix Trie Autocomplete:** 
+  To make the search bar instantly responsive, I implemented an in-memory Prefix Trie. Instead of running expensive SQL `LIKE` queries against the database on every keystroke, the Prefix Trie handles autocomplete suggestions on the backend with $O(L)$ time complexity.
 
-## ⚙️ Quickstart (Docker)
+- **Graph-Based Recommendations (BFS):** 
+  The recommendation system uses a custom Adjacency List graph. It performs a Breadth-First Search (BFS) to traverse book metadata (like matching tags and authors) up to two degrees of separation. This provides users with highly accurate, contextual book suggestions based on what they are currently viewing.
 
-The fastest way to run this locally is using Docker Compose.
+- **Priority Queue Waitlist System:** 
+  The book reservation system operates as a database-backed priority queue. When a book is checked out, users can join the waitlist. High-priority users can dynamically jump ahead in the queue, ensuring the system handles reservations intelligently based on user roles.
+
+## Core Features
+
+- **Authentication & Authorization:** Secure user signup and login with bcrypt password hashing. Differentiates between standard users and system administrators.
+- **Library Catalog Operations:** Users can browse, search, filter, and sort the entire book catalogue seamlessly.
+- **Issue and Return Management:** Robust tracking of book checkouts with a strict 14-day limit. The system automatically handles renewal requests and calculates late fines (₹5/day).
+- **Automated Notifications:** When a reserved book is returned to the library, the system automatically alerts the next person in the priority queue.
+- **Admin Dashboard:** A comprehensive oversight panel for administrators to manage inventory, track active issues, monitor users, and view system health metrics.
+
+## Running the Project Locally
+
+The fastest way to spin up the application and its environment is using Docker.
 
 ```bash
 docker-compose up --build
 ```
-The app will be running at `http://localhost:5000`.
+The application will be accessible at `http://localhost:5000`.
 
-## ⚙️ Quickstart (Local)
+### Manual Setup (Without Docker)
+
+If you prefer to run the application directly using Python:
 
 ```bash
 # 1. Setup Virtual Environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python -m venv venv
+
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
 
 # 2. Install dependencies
-pip install -r requirements.txt
+pip install -r  requirements.txt
 
-# 3. Run
+# 3. Run the server
 python app.py
 ```
 
-## 🔒 Default Admin Credentials
+### Default Admin Credentials
 
-| Username | Password  |
-|----------|-----------|
-| admin    | Admin@123  |
+If you need administrator access to test the dashboard, you can use these default credentials:
+- **Username:** admin
+- **Password:** Admin@123
 
-## 🧪 Testing
+## Testing
 
-The repository contains a dedicated `tests/` suite covering core DSA logic and Flask routes.
+The repository contains a dedicated test suite that covers the core DSA logic as well as the Flask application routes. The tests are written using `pytest`.
 
+To run the test suite:
 ```bash
 python -m pytest tests/ -v
 ```
