@@ -1,0 +1,15 @@
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}/venv/Scripts/python.exe",
+    "python.terminal.activateEnvironment": true,
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/*.pyc": true,
+        "library.db": false
+    },
+    "emmet.includeLanguages": {
+        "jinja-html": "html"
+    },
+    "[python]": {
+        "editor.formatOnSave": true
+    }
+}

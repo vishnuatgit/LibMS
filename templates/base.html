@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}LibMS{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+  {% block head %}{% endblock %}
+  <script>
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  </script>
+</head>
+<body>
+
+{% if session.uid %}
+<!-- Mobile sidebar overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo-wrap">
+        
+      </div>
+      <div class="brand-text">
+        <div class="brand-name">LibMS</div>
+        <div class="brand-sub">Integrated Library System</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-label">Navigation</div>
+      <a href="/dashboard" class="nav-item {% if request.path=='/dashboard' %}active{% endif %}">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+        Dashboard
+      </a>
+      <a href="/books" class="nav-item {% if '/book' in request.path %}active{% endif %}">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2h9a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H3"/><path d="M3 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2"/><line x1="6" y1="6" x2="10" y2="6"/><line x1="6" y1="9" x2="9" y2="9"/></svg>
+        Catalogue
+      </a>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="section-label">My Account</div>
+      <a href="/suggest" class="nav-item {% if request.path=='/suggest' %}active{% endif %}">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/></svg>
+        Suggest a Book
+      </a>
+      <a href="/fines" class="nav-item {% if request.path=='/fines' %}active{% endif %}">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><line x1="8" y1="5" x2="8" y2="8.5"/><circle cx="8" cy="11" r=".5" fill="currentColor"/></svg>
+        Fines
+      </a>
+      <a href="/notifications" class="nav-item {% if request.path=='/notifications' %}active{% endif %}">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2a5 5 0 0 0-5 5v3l-1 1h12l-1-1V7a5 5 0 0 0-5-5z"/><path d="M6.5 13a1.5 1.5 0 0 0 3 0"/></svg>
+        Notifications
+        {% if unread is defined and unread > 0 %}<span class="nav-badge" id="sidebarBadge">{{ unread }}</span>{% endif %}
+      </a>
+      <a href="/profile" class="nav-item {% if request.path=='/profile' %}active{% endif %}">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
+        Profile
+      </a>
+    </div>
+
+    {% if session.is_admin %}
+    <div class="sidebar-section">
+      <div class="section-label">Administration</div>
+      <a href="/admin" class="nav-item {% if request.path=='/admin' %}active{% endif %}">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.22 3.22l1.42 1.42M11.36 11.36l1.42 1.42M3.22 12.78l1.42-1.42M11.36 4.64l1.42-1.42"/></svg>
+        Admin Panel
+      </a>
+    </div>
+    {% endif %}
+
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar">{{ (session.full_name or session.username)[0]|upper }}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="user-name">{{ session.full_name or session.username }}</div>
+          <div class="user-role">{% if session.is_admin %}Administrator{% else %}{{ session.get('member_id','Member') }}{% endif %}</div>
+        </div>
+        <a href="/logout" class="logout-btn" title="Sign out">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h3"/><polyline points="11 11 14 8 11 5"/><line x1="14" y1="8" x2="6" y2="8"/></svg>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="openSidebar()">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="14" y2="12"/></svg>
+      </button>
+
+      <!-- Global live search -->
+      <div class="search-wrap" id="globalSearchWrap" style="position:relative;">
+        <svg class="search-icon" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><line x1="10" y1="10" x2="14" y2="14"/></svg>
+        <input class="form-input" type="text" id="globalSearch" placeholder="Search catalogue..." autocomplete="off" style="width:220px;font-size:.78rem;padding:5px 10px 5px 1.8rem;"/>
+        <span class="search-clear" id="searchClear" onclick="clearGlobalSearch()">&#10005;</span>
+        <div class="search-spinner" id="searchSpinner"></div>
+        <div class="search-results-overlay" id="searchOverlay"></div>
+      </div>
+
+      <div class="topbar-breadcrumb">
+        <span>LibMS</span>
+        <span class="sep">&#8250;</span>
+        <span class="curr">{% block topbar_title %}{% endblock %}</span>
+      </div>
+
+      <div class="topbar-right">
+        <button id="themeToggle" class="topbar-notif-btn" title="Toggle Dark Mode">
+          <svg id="themeIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+        <a href="/notifications" class="topbar-notif-btn" id="notifBtn">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2a5 5 0 0 0-5 5v3l-1 1h12l-1-1V7a5 5 0 0 0-5-5z"/><path d="M6.5 13a1.5 1.5 0 0 0 3 0"/></svg>
+          {% if unread is defined and unread > 0 %}<span class="notif-pip" id="notifPip"></span>{% endif %}
+        </a>
+      </div>
+    </header>
+
+    <main class="page-body">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-stack">
+          {% for cat, msg in messages %}
+          <div class="flash {{ cat }}">
+            <svg class="flash-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              {% if cat=='success' %}<circle cx="8" cy="8" r="6"/><polyline points="5.5 8 7 9.5 10.5 6"/>
+              {% elif cat=='error' %}<circle cx="8" cy="8" r="6"/><line x1="10" y1="6" x2="6" y2="10"/><line x1="6" y1="6" x2="10" y2="10"/>
+              {% else %}<circle cx="8" cy="8" r="6"/><line x1="8" y1="5" x2="8" y2="8.5"/><circle cx="8" cy="11" r=".5" fill="currentColor"/>{% endif %}
+            </svg>
+            {{ msg }}
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<!-- Toast stack -->
+<div class="toast-stack" id="toastStack"></div>
+
+<script>
+// ── Dark Mode Logic ──
+const theme = localStorage.getItem('theme') || 'light';
+if (theme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const target = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', target);
+  localStorage.setItem('theme', target);
+  // Update icon
+  document.getElementById('themeIcon').innerHTML = target === 'dark' 
+    ? '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>'
+    : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+}
+document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
+if(theme === 'dark') {
+  // Sync icon on load
+  const icon = document.getElementById('themeIcon');
+  if(icon) icon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
+}
+
+// ── Mobile sidebar ──
+function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('visible'); document.body.style.overflow='hidden'; }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('visible'); document.body.style.overflow=''; }
+
+// ── Toast system ──
+function showToast(msg, type='info') {
+  const stack = document.getElementById('toastStack');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<span>${msg}</span><span class="toast-close" onclick="this.parentElement.remove()">&#10005;</span>`;
+  stack.appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(),300); }, 3500);
+}
+
+// ── Flash auto-dismiss ──
+setTimeout(() => {
+  document.querySelectorAll('.flash').forEach(f => { f.style.transition='opacity .3s'; f.style.opacity='0'; setTimeout(()=>f.remove(),300); });
+}, 4000);
+
+// ── Global live search ──
+let searchDebounce = null;
+const searchInput   = document.getElementById('globalSearch');
+const searchOverlay = document.getElementById('searchOverlay');
+const searchWrap    = document.getElementById('globalSearchWrap');
+const searchClear   = document.getElementById('searchClear');
+const searchSpinner = document.getElementById('searchSpinner');
+
+searchInput?.addEventListener('input', function() {
+  const q = this.value.trim();
+  searchWrap.classList.toggle('has-value', q.length > 0);
+  clearTimeout(searchDebounce);
+  if (!q) { searchOverlay.classList.remove('visible'); searchOverlay.innerHTML=''; searchWrap.classList.remove('loading'); return; }
+  if (q.length < 2) return;
+  searchWrap.classList.add('loading');
+  searchDebounce = setTimeout(() => runSearch(q), 300);
+});
+
+async function runSearch(q) {
+  try {
+    const res  = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=6`);
+    const data = await res.json();
+    searchWrap.classList.remove('loading');
+    if (!data.results || data.results.length === 0) {
+      searchOverlay.innerHTML = '<div class="search-no-results">No books found for <strong>' + q + '</strong></div>';
+    } else {
+      searchOverlay.innerHTML = data.results.map(b => `
+        <a href="/book/${b.id}" class="search-result-item" onclick="clearGlobalSearch()">
+          <div class="search-result-spine" style="background: url('/static/img/covers/${(b.id % 4) + 1}.png') center/cover;"></div>
+          <div>
+            <div class="search-result-title">${b.title}</div>
+            <div class="search-result-author">${b.authors}</div>
+            <div class="search-result-cat">${b.category}</div>
+          </div>
+          <div style="margin-left:auto;font-size:.7rem;color:${b.available>0?'var(--green)':'var(--red)'};">${b.available>0?b.available+' avail':'Unavailable'}</div>
+        </a>
+      `).join('');
+    }
+    searchOverlay.classList.add('visible');
+  } catch(e) { searchWrap.classList.remove('loading'); }
+}
+
+function clearGlobalSearch() {
+  searchInput.value=''; searchOverlay.innerHTML='';
+  searchOverlay.classList.remove('visible');
+  searchWrap.classList.remove('has-value','loading');
+}
+
+document.addEventListener('click', e => {
+  if (!searchWrap.contains(e.target)) { searchOverlay.classList.remove('visible'); }
+});
+searchInput?.addEventListener('keydown', e => { if(e.key==='Escape') clearGlobalSearch(); });
+
+// ── Notification badge polling ──
+{% if unread is defined %}
+let _lastUnread = {{ unread }};
+setInterval(async () => {
+  try {
+    const r = await fetch('/api/notif_count');
+    const d = await r.json();
+    const pip  = document.getElementById('notifPip');
+    const badge = document.getElementById('sidebarBadge');
+    if (d.count > _lastUnread) showToast('You have a new notification', 'info');
+    _lastUnread = d.count;
+    if (pip)   pip.style.display   = d.count > 0 ? 'block' : 'none';
+    if (badge) badge.textContent   = d.count > 0 ? d.count : '';
+  } catch(e) {}
+}, 60000);
+{% endif %}
+
+// ── Button loading states ──
+document.querySelectorAll('a.btn-primary, a.btn-gold').forEach(btn => {
+  btn.addEventListener('click', function(e) {
+    if (this.href && !this.href.includes('javascript') && !this.onclick) {
+      setTimeout(() => this.classList.add('loading'), 50);
+    }
+  });
+});
+</script>
+
+{% else %}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div style="position:fixed;top:1rem;right:1rem;z-index:9999;display:flex;flex-direction:column;gap:.4rem;max-width:300px;">
+    {% for cat, msg in messages %}
+    <div class="flash {{ cat }}" style="box-shadow:var(--shadow);">{{ msg }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endwith %}
+{{ self.content() }}
+{% endif %}
+
+</body>
+</html>

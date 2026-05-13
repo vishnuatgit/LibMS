@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Profile — LibMS{% endblock %}
+{% block topbar_title %}Profile{% endblock %}
+{% block content %}
+<div class="profile-banner fade-up-1">
+  <div class="profile-big-avatar">{{ (user.full_name or user.username)[0]|upper }}</div>
+  <div class="profile-banner-info">
+    <div class="profile-banner-name">{{ user.full_name or user.username }}</div>
+    <div class="profile-banner-role">{% if user.is_admin %}Administrator{% else %}Student Member{% endif %}</div>
+    <div class="profile-banner-joined">Member since {{ user.joined_at }}</div>
+  </div>
+  {% if user.is_admin %}<span class="badge badge-admin" style="margin-left:auto;align-self:flex-start;z-index:1;">Admin</span>{% endif %}
+</div>
+
+<div class="stats-grid" style="margin-bottom:1.75rem;">
+  <div class="stat-card accent"><div class="stat-num">{{ stats.total }}</div><div class="stat-label">Total Borrowed</div></div>
+  <div class="stat-card {% if stats.active > 0 %}blue{% endif %}"><div class="stat-num">{{ stats.active }}</div><div class="stat-label">Currently Held</div></div>
+  <div class="stat-card {% if stats.fines > 0 %}red{% endif %}"><div class="stat-num">Rs. {{ stats.fines }}</div><div class="stat-label">Fines Paid</div></div>
+  <div class="stat-card green"><div class="stat-num">{{ stats.reviews }}</div><div class="stat-label">Reviews Written</div></div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 340px;gap:1.5rem;align-items:start;">
+  <div>
+    <div class="section-title">Borrowing History</div>
+    {% if history %}
+    <div class="table-card">
+      <table class="table">
+        <thead><tr><th>Book</th><th>Issued</th><th>Returned</th><th>Fine</th></tr></thead>
+        <tbody>
+          {% for h in history %}
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:.5rem;">
+                <div class="color-bar" style="background-color: {{ h.cover_color }}; background-image: url('/static/img/covers/{{ (h.book_id % 4) + 1 }}.png'); background-size: cover; background-position: center;"></div>
+                <div>
+                  <div style="font-size:.825rem;font-weight:500;">{{ h.title }}</div>
+                  <div class="tag">{{ h.author }}</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="tag">{{ h.issued_at }}</span></td>
+            <td><span class="tag">{{ h.returned_at[:10] if h.returned_at else '—' }}</span></td>
+            <td>{% if h.fine_paid %}<span class="text-red">Rs. {{ h.fine_paid }}</span>{% else %}<span class="text-green">Nil</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="table-card"><div class="empty-state"><p>No borrowing history yet.</p></div></div>
+    {% endif %}
+  </div>
+
+  <div>
+    <div class="section-title">Edit Profile</div>
+    <div class="table-card">
+      <div style="padding:1.25rem;">
+        <form method="POST">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token }}"/>
+          <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" name="full_name" value="{{ user.full_name or '' }}"/></div>
+          <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" name="email" value="{{ user.email or '' }}"/></div>
+          <div class="form-group"><label class="form-label">Phone</label><input class="form-input" name="phone" value="{{ user.phone or '' }}"/></div>
+          <div class="divider"></div>
+          <div class="form-group"><label class="form-label">New Password <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray-300);">(leave blank to keep)</span></label><input class="form-input" type="password" name="new_password" placeholder="Min. 6 characters"/></div>
+          <button type="submit" class="btn btn-primary btn-full">Save Changes</button>
+        </form>
+      </div>
+    </div>
+    <div style="margin-top:.75rem;">
+      <a href="/logout" class="btn btn-outline btn-full">Sign Out</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

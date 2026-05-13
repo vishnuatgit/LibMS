@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Sign In — LibMS{% endblock %}
+{% block content %}
+<div class="auth-page">
+  <div class="auth-left">
+    <div class="auth-logo-wrap">
+      
+    </div>
+    <div class="auth-headline">Library<br><em>Management</em><br>System</div>
+    <p class="auth-tagline">Manage your borrowings, track due dates, and explore the university's collection.</p>
+    <div class="auth-divider"></div>
+    <div class="auth-features">
+      <div class="auth-feat">
+        <div class="auth-feat-dot"></div>
+        <div>
+          <div class="auth-feat-title">Borrow up to 5 books</div>
+          <div class="auth-feat-desc">Hold multiple titles with 14-day borrow periods and one renewal per book.</div>
+        </div>
+      </div>
+      <div class="auth-feat">
+        <div class="auth-feat-dot"></div>
+        <div>
+          <div class="auth-feat-title">Reserve unavailable titles</div>
+          <div class="auth-feat-desc">Join the queue for books currently checked out by other members.</div>
+        </div>
+      </div>
+      <div class="auth-feat">
+        <div class="auth-feat-dot"></div>
+        <div>
+          <div class="auth-feat-title">Automatic fine tracking</div>
+          <div class="auth-feat-desc">Fines calculated at Rs. 5 per day. View and manage from your dashboard.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="auth-right">
+    <div class="auth-form-card">
+      <div class="auth-form-title">Welcome back</div>
+      <p class="auth-form-sub">Sign in to your LibMS account</p>
+      <form method="POST">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token }}"/>
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <input class="form-input" type="text" name="username" placeholder="Enter your username" autofocus required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" type="password" name="password" placeholder="Enter your password" required/>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg btn-full" style="margin-top:.5rem">Sign In</button>
+      </form>
+      <p class="auth-form-footer">New member? <a href="/signup">Create an account</a></p>
+      <div class="auth-demo-btn" onclick="document.querySelector('input[name=username]').value='admin'; document.querySelector('input[name=password]').value='Admin@123';">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        Fill Demo Credentials
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Notifications — LibMS{% endblock %}
+{% block topbar_title %}Notifications{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <div class="page-title">Notifications</div>
+    <div class="page-sub">All system notifications for your account</div>
+  </div>
+</div>
+<div class="table-card">
+  {% if notifs %}
+    {% for n in notifs %}
+    <div class="notif-row">
+      <div class="notif-pip {{ n.type }}"></div>
+      <span class="notif-msg">{{ n.message }}</span>
+      <span class="notif-time">{{ n.created_at[:10] }}</span>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="empty-state">
+    <svg class="empty-state-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M24 6a15 15 0 0 0-15 15v9l-3 3h36l-3-3V21A15 15 0 0 0 24 6z"/><path d="M19.5 39a4.5 4.5 0 0 0 9 0"/></svg>
+    <p>No notifications yet.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

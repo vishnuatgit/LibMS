@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Suggest a Book — LibMS{% endblock %}
+{% block topbar_title %}Suggest a Book{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <div class="page-title">Book Suggestions</div>
+    <div class="page-sub">Recommend a title for the library to acquire</div>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:380px 1fr;gap:1.5rem;align-items:start;">
+  <div>
+    <div class="section-title">New Suggestion</div>
+    <div class="table-card">
+      <div style="padding:1.25rem;">
+        <form method="POST">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token }}"/>
+          <div class="form-group"><label class="form-label">Book Title <span style="color:var(--red)">*</span></label><input class="form-input" name="title" placeholder="e.g. The Art of Problem Solving" required/></div>
+          <div class="form-group"><label class="form-label">Author</label><input class="form-input" name="author" placeholder="e.g. Richard Rusczyk"/></div>
+          <div class="form-group"><label class="form-label">ISBN</label><input class="form-input" name="isbn" placeholder="978-..."/></div>
+          <div class="form-group"><label class="form-label">Why should we add this book?</label><textarea class="form-input" name="reason" rows="4" placeholder="Explain how this book would benefit students or the curriculum..."></textarea></div>
+          <button type="submit" class="btn btn-primary btn-full">Submit Suggestion</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="section-title">Your Submissions</div>
+    {% if suggestions %}
+    <div class="table-card">
+      <table class="table">
+        <thead><tr><th>Title</th><th>Author</th><th>Submitted</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for s in suggestions %}
+          <tr>
+            <td><div class="fw-600" style="font-size:.825rem;">{{ s.title }}</div>{% if s.isbn %}<div class="tag">{{ s.isbn }}</div>{% endif %}</td>
+            <td><span style="font-size:.825rem;">{{ s.author or '—' }}</span></td>
+            <td><span class="tag">{{ s.created_at[:10] }}</span></td>
+            <td>
+              {% if s.status == 'pending' %}<span class="badge badge-gold">Pending</span>
+              {% elif s.status == 'approved' %}<span class="badge badge-green">Approved</span>
+              {% elif s.status == 'ordered' %}<span class="badge badge-blue">Ordered</span>
+              {% else %}<span class="badge badge-gray">Not Approved</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="table-card"><div class="empty-state"><p>No suggestions submitted yet.</p></div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,407 @@
+{% extends "base.html" %}
+{% block title %}Admin Panel — LibMS{% endblock %}
+{% block topbar_title %}Admin Panel{% endblock %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+{% block content %}
+
+<div class="page-header fade-up-1">
+  <div class="page-header-left">
+    <div class="page-title">Administration</div>
+    <div class="page-sub">LibMS</div>
+  </div>
+  <button class="btn btn-primary" onclick="openModal('addBookModal')">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/></svg>
+    Add Book
+  </button>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid fade-up-2">
+  <div class="stat-card blue"><div class="stat-num">{{ stats.users }}</div><div class="stat-label">Members</div></div>
+  <div class="stat-card accent"><div class="stat-num">{{ stats.books }}</div><div class="stat-label">Titles &mdash; {{ stats.copies }} copies</div></div>
+  <div class="stat-card {% if stats.overdue > 0 %}red{% else %}green{% endif %}">
+    <div class="stat-num">{{ stats.issued }}</div>
+    <div class="stat-label">Issued &mdash; {{ stats.overdue }} overdue</div>
+  </div>
+  <div class="stat-card {% if stats.fines_unpaid > 0 %}red{% else %}gold{% endif %}">
+    <div class="stat-num">Rs.{{ stats.fines_total }}</div>
+    <div class="stat-label">Fines &mdash; Rs.{{ stats.fines_unpaid }} unpaid</div>
+  </div>
+  <div class="stat-card blue"><div class="stat-num">{{ stats.holds }}</div><div class="stat-label">Active Holds</div></div>
+  <div class="stat-card {% if stats.suggestions > 0 %}gold{% endif %}"><div class="stat-num">{{ stats.suggestions }}</div><div class="stat-label">Pending Suggestions</div></div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs fade-up-3" id="adminTabs">
+  <button class="tab-btn active" onclick="switchTab('issues')">
+    Active Issues <span class="tab-badge {% if stats.overdue > 0 %}{% else %}gray{% endif %}">{{ stats.issued }}</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('books')">
+    Books <span class="tab-badge gray">{{ stats.books }}</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('members')">
+    Members <span class="tab-badge gray">{{ stats.users }}</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('acquisitions')">
+    Suggestions
+    {% if stats.suggestions > 0 %}<span class="tab-badge gold">{{ stats.suggestions }}</span>{% endif %}
+  </button>
+  <button class="tab-btn" onclick="switchTab('reports')">Reports</button>
+</div>
+
+<!-- ── Tab: Active Issues ── -->
+<div class="tab-panel active" id="tab-issues">
+  <div class="table-card">
+    <div class="table-card-header">
+      <span class="table-card-title">Currently Issued Books</span>
+      <span class="badge badge-navy">{{ txns|length }} active</span>
+    </div>
+    {% if txns %}
+    <table class="table">
+      <thead><tr><th>Member</th><th>Book</th><th>Barcode</th><th>Issued</th><th>Due</th><th>Fine</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for t in txns %}
+        <tr {% if t.overdue %}class="row-alert"{% endif %}>
+          <td>
+            <div style="font-weight:600;font-size:.8rem;">{{ t.full_name or t.username }}</div>
+            <div class="tag">{{ t.member_id }}</div>
+          </td>
+          <td>
+            <div style="display:flex;align-items:center;gap:.5rem;">
+              <div class="color-bar" style="background-color: {{ t.cover_color }}; background-image: url('/static/img/covers/{{ (t.book_id % 4) + 1 }}.png'); background-size: cover; background-position: center;"></div>
+              <div style="font-size:.8rem;font-weight:500;">{{ t.title }}</div>
+            </div>
+          </td>
+          <td><span class="tag" style="font-family:var(--mono);">{{ t.barcode }}</span></td>
+          <td><span class="tag">{{ t.issued_at }}</span></td>
+          <td>
+            {% if t.overdue %}<span class="text-red fw-600">{{ t.due_date }}</span>
+            {% else %}<span class="tag">{{ t.due_date }}</span>{% endif %}
+          </td>
+          <td>{% if t.fine > 0 %}<span class="text-red fw-600">Rs.{{ t.fine }}</span>{% else %}&mdash;{% endif %}</td>
+          <td>
+            <a href="/admin/force_return/{{ t.id }}" class="btn btn-danger btn-sm" onclick="return confirm('Force return this book?')">Return</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="table-empty">
+      <svg class="table-empty-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="24" cy="24" r="18"/><polyline points="16 24 21 29 32 18"/></svg>
+      <p>No books currently issued.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── Tab: Books ── -->
+<div class="tab-panel" id="tab-books">
+  <div class="table-card">
+    <div class="table-card-header">
+      <span class="table-card-title">Book Catalogue</span>
+      <div style="display:flex;gap:.5rem;align-items:center;">
+        <input class="form-input" type="text" id="bookSearch" placeholder="Filter books..." style="width:200px;font-size:.78rem;padding:5px 10px;"/>
+        <button class="btn btn-primary btn-sm" onclick="openModal('addBookModal')">Add Book</button>
+      </div>
+    </div>
+    <table class="table" id="bookTable">
+      <thead><tr><th>Title</th><th>Category</th><th>Dewey</th><th>Year</th><th>Copies</th><th>Issued</th><th>Rating</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for b in books %}
+        <tr data-title="{{ b.title|lower }}">
+          <td>
+            <div style="display:flex;align-items:center;gap:.5rem;">
+              <div class="color-bar" style="background-color: {{ b.cover_color }}; background-image: url('/static/img/covers/{{ (b.id % 4) + 1 }}.png'); background-size: cover; background-position: center;"></div>
+              <div>
+                <div class="fw-600" style="font-size:.8rem;">{{ b.title }}</div>
+                <div class="tag">{{ b.publisher_name or '' }}</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="badge badge-gray">{{ b.category }}</span></td>
+          <td><span class="tag">{{ b.dewey or '&mdash;' }}</span></td>
+          <td><span class="tag">{{ b.pub_year or '&mdash;' }}</span></td>
+          <td>{{ b.total_copies }}</td>
+          <td>
+            {% if b.issued_now == b.total_copies %}<span class="badge badge-red">All out</span>
+            {% else %}<span class="text-green fw-600">{{ b.issued_now }}/{{ b.total_copies }}</span>{% endif %}
+          </td>
+          <td>
+            <div class="star-row">
+              {% for i in range(1,6) %}<span class="star" style="color:{% if i<=b.avg_rating|round %}var(--gold){% else %}var(--gray-100){% endif %}">&#9733;</span>{% endfor %}
+            </div>
+          </td>
+          <td>
+            <div style="display:flex;gap:.3rem;">
+              <button class="btn btn-outline btn-sm" onclick="openEditModal({{ b.id }},'{{ b.title|replace("'","\\'") }}','{{ b.pub_year or "" }}','{{ b.category }}','{{ b.total_copies }}')">Edit</button>
+              <a href="/admin/delete_book/{{ b.id }}" class="btn btn-danger btn-sm" onclick="return confirm('Delete this book permanently?')">Delete</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Tab: Members ── -->
+<div class="tab-panel" id="tab-members">
+  <div class="table-card">
+    <div class="table-card-header">
+      <span class="table-card-title">Registered Members</span>
+      <input class="form-input" type="text" id="memberSearch" placeholder="Filter members..." style="width:200px;font-size:.78rem;padding:5px 10px;"/>
+    </div>
+    <table class="table" id="memberTable">
+      <thead><tr><th>Member</th><th>ID</th><th>Department</th><th>Type</th><th>Joined</th><th>Books</th><th>Role</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for u in users %}
+        <tr data-name="{{ (u.full_name or u.username)|lower }}">
+          <td>
+            <div style="display:flex;align-items:center;gap:.5rem;">
+              <div class="user-avatar" style="width:24px;height:24px;font-size:.62rem;background:var(--navy);color:var(--white);">{{ u.username[0]|upper }}</div>
+              <div>
+                <div class="fw-600" style="font-size:.8rem;">{{ u.full_name or u.username }}</div>
+                <div class="tag">@{{ u.username }}</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="tag" style="font-family:var(--mono);">{{ u.member_id }}</span></td>
+          <td><span style="font-size:.78rem;">{{ u.department or '&mdash;' }}</span></td>
+          <td><span class="badge badge-gray">{{ u.membership_type }}</span></td>
+          <td><span class="tag">{{ u.joined_at }}</span></td>
+          <td>{% if u.active_books > 0 %}<span class="badge badge-blue">{{ u.active_books }}</span>{% else %}&mdash;{% endif %}</td>
+          <td>{% if u.is_admin %}<span class="badge badge-admin">Admin</span>{% else %}<span class="badge badge-gray">Member</span>{% endif %}</td>
+          <td>
+            {% if not u.is_admin %}
+            <div style="display:flex;gap:.3rem;">
+              <a href="/admin/toggle_ban/{{ u.id }}" class="btn btn-sm {% if u.is_banned %}btn-success{% else %}btn-danger{% endif %}" onclick="return confirm('{{ 'Unban' if u.is_banned else 'Ban' }} this member?')">{% if u.is_banned %}Unban{% else %}Ban{% endif %}</a>
+              <button class="btn btn-outline btn-sm" onclick="openNotifModal({{ u.id }},'{{ u.username }}')">Notify</button>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Tab: Acquisitions ── -->
+<div class="tab-panel" id="tab-acquisitions">
+  <div class="table-card">
+    <div class="table-card-header"><span class="table-card-title">Book Suggestions</span></div>
+    {% if acquisitions %}
+    <table class="table">
+      <thead><tr><th>Title</th><th>Author</th><th>Suggested By</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for a in acquisitions %}
+        <tr>
+          <td>
+            <div class="fw-600" style="font-size:.8rem;">{{ a.title }}</div>
+            {% if a.isbn %}<div class="tag">{{ a.isbn }}</div>{% endif %}
+          </td>
+          <td>{{ a.author or '&mdash;' }}</td>
+          <td><span class="tag">{{ a.username or 'Anonymous' }}</span></td>
+          <td><span class="tag">{{ a.created_at[:10] }}</span></td>
+          <td>
+            {% if a.status=='pending' %}<span class="badge badge-gold">Pending</span>
+            {% elif a.status=='approved' %}<span class="badge badge-green">Approved</span>
+            {% elif a.status=='ordered' %}<span class="badge badge-blue">Ordered</span>
+            {% else %}<span class="badge badge-gray">Rejected</span>{% endif %}
+          </td>
+          <td>
+            {% if a.status=='pending' %}
+            <div style="display:flex;gap:.3rem;">
+              <a href="/admin/acquisition/{{ a.id }}/approve" class="btn btn-success btn-sm">Approve</a>
+              <a href="/admin/acquisition/{{ a.id }}/order"   class="btn btn-outline btn-sm">Order</a>
+              <a href="/admin/acquisition/{{ a.id }}/reject"  class="btn btn-danger btn-sm">Reject</a>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="table-empty"><p>No book suggestions yet.</p></div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── Tab: Reports ── -->
+<div class="tab-panel" id="tab-reports">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+
+    <!-- Most Borrowed -->
+    <div class="chart-card">
+      <div class="chart-title">Most Borrowed Titles</div>
+      <div class="bar-chart">
+        {% set max_count = top_books[0].borrow_count if top_books else 1 %}
+        {% for b in top_books %}
+        <div class="bar-item">
+          <div class="bar-label" title="{{ b.title }}">{{ b.title[:22] }}{% if b.title|length > 22 %}…{% endif %}</div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width:{{ (b.borrow_count / max_count * 100)|int }}%;animation-delay:{{ loop.index0 * 0.05 }}s;"></div>
+          </div>
+          <div class="bar-count">{{ b.borrow_count }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Category breakdown doughnut -->
+    <div class="chart-card">
+      <div class="chart-title">Circulation by Category</div>
+      <div style="position:relative;height:220px;">
+        <canvas id="catChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Summary numbers -->
+    <div class="chart-card">
+      <div class="chart-title">Collection Overview</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+        {% set overview = [
+          ('Total Titles',    stats.books),
+          ('Physical Copies', stats.copies),
+          ('Active Members',  stats.users),
+          ('Total Issues',    stats.issued),
+          ('Active Holds',    stats.holds),
+          ('Fines Collected', 'Rs.' ~ stats.fines_total),
+        ] %}
+        {% for label, val in overview %}
+        <div style="background:var(--gray-50);border:1px solid var(--gray-100);border-radius:var(--r);padding:.75rem;">
+          <div style="font-family:var(--serif);font-size:1.3rem;color:var(--navy);">{{ val }}</div>
+          <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--gray-500);margin-top:2px;">{{ label }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Category issue bar -->
+    <div class="chart-card">
+      <div class="chart-title">Issues by Category</div>
+      <div class="bar-chart">
+        {% if cat_stats %}
+        {% set max_cat = cat_stats[0].cnt if cat_stats else 1 %}
+        {% for c in cat_stats %}
+        <div class="bar-item">
+          <div class="bar-label">{{ c.category }}</div>
+          <div class="bar-track">
+            <div class="bar-fill gold" style="width:{{ (c.cnt / max_cat * 100)|int }}%;animation-delay:{{ loop.index0 * 0.05 }}s;"></div>
+          </div>
+          <div class="bar-count">{{ c.cnt }}</div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p class="text-muted" style="font-size:.8rem;">No circulation data yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ─── MODALS ─── -->
+
+<!-- Add Book -->
+<div class="modal-overlay" id="addBookModal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Add New Book</span><span class="modal-close" onclick="closeModal('addBookModal')">&#10005;</span></div>
+    <form method="POST" action="/admin/add_book">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token }}"/>
+      <div class="form-row"><div class="form-group"><label class="form-label">Title *</label><input class="form-input" name="title" required autofocus/></div><div class="form-group"><label class="form-label">Author *</label><input class="form-input" name="author" required/></div></div>
+      <div class="form-row"><div class="form-group"><label class="form-label">Category *</label><input class="form-input" name="category" list="catList" required/><datalist id="catList">{% for c in categories %}<option value="{{ c }}">{% endfor %}</datalist></div><div class="form-group"><label class="form-label">Copies</label><input class="form-input" type="number" name="copies" value="1" min="1"/></div></div>
+      <div class="form-row"><div class="form-group"><label class="form-label">Publisher</label><select class="form-input" name="publisher_id"><option value="">— select —</option>{% for p in publishers %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select></div><div class="form-group"><label class="form-label">Year</label><input class="form-input" type="number" name="year" placeholder="2024"/></div></div>
+      <div class="form-row"><div class="form-group"><label class="form-label">Edition</label><input class="form-input" name="edition" placeholder="1st Edition"/></div><div class="form-group"><label class="form-label">Pages</label><input class="form-input" type="number" name="pages"/></div></div>
+      <div class="form-row"><div class="form-group"><label class="form-label">ISBN-13</label><input class="form-input" name="isbn" placeholder="978-..."/></div><div class="form-group"><label class="form-label">Dewey</label><input class="form-input" name="dewey" placeholder="005.1 MAR"/></div></div>
+      <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" name="description" rows="3"></textarea></div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="closeModal('addBookModal')">Cancel</button><button type="submit" class="btn btn-primary">Add to Catalogue</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Book -->
+<div class="modal-overlay" id="editBookModal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Edit Book</span><span class="modal-close" onclick="closeModal('editBookModal')">&#10005;</span></div>
+    <form method="POST" id="editBookForm">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token }}"/>
+      <div class="form-group"><label class="form-label">Title *</label><input class="form-input" name="title" id="e_title" required/></div>
+      <div class="form-row"><div class="form-group"><label class="form-label">Year</label><input class="form-input" type="number" name="year" id="e_year"/></div><div class="form-group"><label class="form-label">Category *</label><input class="form-input" name="category" id="e_cat" required/></div></div>
+      <div class="form-group"><label class="form-label">Total Copies</label><input class="form-input" type="number" name="copies" id="e_copies" min="1"/></div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="closeModal('editBookModal')">Cancel</button><button type="submit" class="btn btn-primary">Save Changes</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- Notify User -->
+<div class="modal-overlay" id="notifModal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title" id="notifModalTitle">Send Notification</span><span class="modal-close" onclick="closeModal('notifModal')">&#10005;</span></div>
+    <form method="POST" id="notifForm">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token }}"/>
+      <div class="form-group"><label class="form-label">Message</label><textarea class="form-input" name="message" rows="3" required placeholder="Enter your message..."></textarea></div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="closeModal('notifModal')">Cancel</button><button type="submit" class="btn btn-primary">Send</button></div>
+    </form>
+  </div>
+</div>
+
+<script>
+// ── Tabs ──
+function switchTab(id) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => { b.classList.toggle('active', b.getAttribute('onclick').includes("'"+id+"'")); });
+  document.querySelectorAll('.tab-panel').forEach(p => { p.classList.toggle('active', p.id === 'tab-'+id); });
+}
+
+// ── Modals ──
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openEditModal(id, title, year, cat, copies) {
+  document.getElementById('editBookForm').action = '/admin/edit_book/' + id;
+  document.getElementById('e_title').value  = title;
+  document.getElementById('e_year').value   = year;
+  document.getElementById('e_cat').value    = cat;
+  document.getElementById('e_copies').value = copies;
+  openModal('editBookModal');
+}
+function openNotifModal(uid, username) {
+  document.getElementById('notifForm').action = '/admin/notify_user/' + uid;
+  document.getElementById('notifModalTitle').textContent = 'Notify @' + username;
+  openModal('notifModal');
+}
+document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); }));
+
+// ── Client-side table search ──
+function filterTable(inputId, tableId) {
+  const q   = document.getElementById(inputId).value.toLowerCase();
+  const rows = document.querySelectorAll(`#${tableId} tbody tr`);
+  rows.forEach(r => { r.style.display = r.dataset.title?.includes(q) || r.dataset.name?.includes(q) ? '' : 'none'; });
+}
+document.getElementById('bookSearch')?.addEventListener('input', () => filterTable('bookSearch', 'bookTable'));
+document.getElementById('memberSearch')?.addEventListener('input', () => filterTable('memberSearch', 'memberTable'));
+
+// ── Chart.js doughnut ──
+const catData = {{ cat_stats | tojson }};
+if (catData.length && document.getElementById('catChart')) {
+  const colors = ['#0a1628','#1a3058','#243a6a','#b8912a','#d4a843','#166534','#1e40af','#b91c1c','#92400e','#4a2020','#2d4a2d','#3d2b5c','#1a4a4a','#4a3520','#3a2d4a'];
+  new Chart(document.getElementById('catChart'), {
+    type: 'doughnut',
+    data: {
+      labels: catData.map(c => c.category),
+      datasets: [{ data: catData.map(c => c.cnt), backgroundColor: colors.slice(0,catData.length), borderWidth: 2, borderColor: '#ffffff' }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '68%',
+      plugins: {
+        legend: { position:'right', labels: { font:{size:10,family:"'Plus Jakarta Sans',sans-serif"}, padding:10, usePointStyle:true, pointStyleWidth:8 }},
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw} issues` } }
+      }
+    }
+  });
+}
+</script>
+{% endblock %}

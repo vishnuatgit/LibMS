@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Fines — LibMS{% endblock %}
+{% block topbar_title %}Fines{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="page-header-left">
+    <div class="page-title">Fine Summary</div>
+    <div class="page-sub">Fines accrue at Rs. {{ 5 }} per day after the due date</div>
+  </div>
+</div>
+<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);max-width:540px;margin-bottom:1.75rem;">
+  <div class="stat-card {% if total_accruing > 0 %}red{% endif %}">
+    <div class="stat-num">Rs. {{ total_accruing }}</div><div class="stat-label">Currently Accruing</div>
+  </div>
+  <div class="stat-card {% if total_unpaid > 0 %}red{% endif %}">
+    <div class="stat-num">Rs. {{ total_unpaid }}</div><div class="stat-label">Unpaid Fines</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num">Rs. {{ total_paid }}</div><div class="stat-label">Total Paid</div>
+  </div>
+</div>
+
+<div class="section-title">Accruing Now</div>
+{% if accruing %}
+<div class="table-card" style="margin-bottom:1.75rem;">
+  <table class="table">
+    <thead><tr><th>Book</th><th>Due Date</th><th>Days Overdue</th><th>Fine</th></tr></thead>
+    <tbody>
+      {% for f in accruing %}
+      <tr class="row-alert">
+        <td><div style="display:flex;align-items:center;gap:.5rem;"><div class="color-bar" style="background-color: {{ f.cover_color }}; background-image: url('/static/img/covers/{{ (f.book_id % 4) + 1 }}.png'); background-size: cover; background-position: center;"></div>{{ f.title }}</div></td>
+        <td><span class="text-red fw-600">{{ f.due_date }}</span></td>
+        <td>{{ f.fine // 5 }} days</td>
+        <td><span class="text-red fw-600">Rs. {{ f.fine }}</span></td>
+      </tr>
+      {% endfor %}
+      <tr><td colspan="3" style="text-align:right;font-weight:700;">Total Accruing</td><td><span class="text-red fw-600">Rs. {{ total_accruing }}</span></td></tr>
+    </tbody>
+  </table>
+</div>
+<div style="background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:var(--r);padding:.9rem 1.1rem;font-size:.825rem;color:var(--amber);margin-bottom:1.75rem;">
+  Return overdue books from your <a href="/dashboard" style="color:var(--amber);text-decoration:underline;font-weight:600;">dashboard</a> to stop fines from increasing.
+</div>
+{% else %}
+<div class="table-card" style="margin-bottom:1.75rem;">
+  <div class="empty-state">
+    <svg class="empty-state-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="24" cy="24" r="18"/><polyline points="16 24 21 29 32 18"/></svg>
+    <p>No outstanding fines. All books are on time.</p>
+  </div>
+</div>
+{% endif %}
+
+{% if records %}
+<div class="section-title">Fine History</div>
+<div class="table-card">
+  <table class="table">
+    <thead><tr><th>Book</th><th>Amount</th><th>Reason</th><th>Date</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for r in records %}
+      <tr>
+        <td>{{ r.title }}</td>
+        <td><span class="text-red fw-600">Rs. {{ r.amount }}</span></td>
+        <td style="font-size:.75rem;color:var(--gray-500);">{{ r.reason or '—' }}</td>
+        <td><span class="tag">{{ r.created_at[:10] }}</span></td>
+        <td>{% if r.paid %}<span class="badge badge-green">Paid</span>{% else %}<span class="badge badge-red">Unpaid</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

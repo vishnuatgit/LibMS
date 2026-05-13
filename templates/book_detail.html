@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}{{ b.title }} — LibMS{% endblock %}
+{% block topbar_title %}Book Detail{% endblock %}
+{% block content %}
+<div style="margin-bottom:1.25rem;">
+  <a href="/books" class="btn btn-outline btn-sm"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="10 3 5 8 10 13"/></svg> Back to Catalogue</a>
+</div>
+
+<div class="book-detail-hero fade-up-1">
+  <div class="book-detail-cover" style="background: url('/static/img/covers/{{ (b.id % 4) + 1 }}.png') center/cover;">
+    <div class="book-detail-cover-title">{{ b.title }}</div>
+  </div>
+  <div class="book-detail-info">
+    <div class="book-detail-category">{{ b.category }} {% if b.dewey %}&mdash; {{ b.dewey }}{% endif %}</div>
+    <div class="book-detail-title">{{ b.title }}{% if b.subtitle %}<span style="font-size:1.1rem;font-style:italic;color:var(--gray-500);"> &mdash; {{ b.subtitle }}</span>{% endif %}</div>
+    <div class="book-detail-author">{{ authors }}</div>
+    <div class="star-row" style="margin-bottom:1rem;">
+      {% for i in range(1,6) %}<span class="star" style="font-size:1rem;color:{% if i<=b.avg_rating|round %}var(--gold){% else %}var(--gray-100){% endif %}">&#9733;</span>{% endfor %}
+      <span style="font-size:.8rem;color:var(--gray-500);margin-left:5px;">{{ "%.1f"|format(b.avg_rating) }} from {{ b.review_count }} review{% if b.review_count!=1 %}s{% endif %}</span>
+    </div>
+    <div class="meta-grid">
+      {% if b.publisher_name %}<div class="meta-item"><label>Publisher</label><span>{{ b.publisher_name }}</span></div>{% endif %}
+      {% if b.pub_year %}<div class="meta-item"><label>Year</label><span>{{ b.pub_year }}</span></div>{% endif %}
+      {% if b.edition %}<div class="meta-item"><label>Edition</label><span>{{ b.edition }}</span></div>{% endif %}
+      {% if b.pages %}<div class="meta-item"><label>Pages</label><span>{{ b.pages }}</span></div>{% endif %}
+      {% if b.language %}<div class="meta-item"><label>Language</label><span>{{ b.language }}</span></div>{% endif %}
+      {% if b.isbn %}<div class="meta-item"><label>ISBN-13</label><span class="tag" style="font-size:.75rem;">{{ b.isbn }}</span></div>{% endif %}
+      <div class="meta-item"><label>Available</label>
+        {% if avail > 0 %}<span class="text-green fw-600">{{ avail }} of {{ b.total_copies }}</span>
+        {% else %}<span class="text-red fw-600">All {{ b.total_copies }} issued</span>{% endif %}
+      </div>
+      {% if hold_count > 0 %}<div class="meta-item"><label>Holds Queue</label><span class="text-muted">{{ hold_count }} waiting</span></div>{% endif %}
+    </div>
+    {% if tags %}
+    <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:1rem;">
+      {% for tag in tags %}<span class="pill" style="cursor:default;font-size:.68rem;">{{ tag.name }}</span>{% endfor %}
+    </div>
+    {% endif %}
+    {% if b.description %}<p class="book-description">{{ b.description }}</p>{% endif %}
+    <div class="action-row">
+      {% if my_issued %}
+        <a href="/return/{{ my_issued.id }}" class="btn btn-danger" onclick="return confirm('Return this book?')">Return Book</a>
+        {% if not my_issued.renewed %}<a href="/renew/{{ my_issued.id }}" class="btn btn-outline">Renew (until {{ my_issued.due_date }})</a>{% endif %}
+        {% if my_issued.renewed %}<span class="badge badge-gray">Renewal used</span>{% endif %}
+      {% elif avail > 0 %}
+        <a href="/issue/{{ b.id }}" class="btn btn-primary" onclick="return confirm('Issue this book?')">Issue This Book</a>
+      {% elif my_hold %}
+        <span class="badge badge-gold" style="padding:6px 12px;font-size:.78rem;">{% if my_hold.status=='ready' %}Ready for collection{% else %}Hold placed — you are in queue{% endif %}</span>
+        <a href="/cancel_hold/{{ my_hold.id }}" class="btn btn-outline btn-sm">Cancel Hold</a>
+      {% else %}
+        <a href="/hold/{{ b.id }}" class="btn btn-outline">Place Hold</a>
+        <span class="text-muted" style="font-size:.82rem;align-self:center;">All copies currently issued</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr;gap:1.5rem;">
+
+  <!-- Copy inventory -->
+  <div>
+    <div class="section-title">Copy Inventory</div>
+    <div class="table-card" style="margin-bottom:1.5rem;">
+      <table class="table">
+        <thead><tr><th>Barcode</th><th>Condition</th><th>Location</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for c in copies %}
+          <tr>
+            <td><span class="tag" style="font-family:var(--mono);">{{ c.barcode }}</span></td>
+            <td><span class="badge {% if c.condition=='Good' %}badge-green{% elif c.condition=='Fair' %}badge-gold{% else %}badge-red{% endif %}">{{ c.condition }}</span></td>
+            <td>{{ c.location }}</td>
+            <td>
+              {# Check if this copy is currently issued #}
+              <span class="badge badge-gray">On shelf</span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Reviews -->
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:1.5rem;align-items:start;">
+    <div>
+      <div class="section-title">Reviews</div>
+      {% if reviews %}
+        {% for r in reviews %}
+        <div class="review-card">
+          <div class="review-header">
+            <div class="review-avatar">{{ (r.full_name or r.username)[0]|upper }}</div>
+            <span class="review-author">{{ r.full_name or r.username }}</span>
+            <div style="display:flex;gap:2px;margin-left:6px;">
+              {% for i in range(1,6) %}<span class="star" style="font-size:.7rem;color:{% if i<=r.rating %}var(--gold){% else %}var(--gray-100){% endif %}">&#9733;</span>{% endfor %}
+            </div>
+            <span class="review-date">{{ r.created_at[:10] }}</span>
+          </div>
+          {% if r.comment %}<p class="review-text">{{ r.comment }}</p>{% endif %}
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="table-card"><div class="empty-state" style="padding:2rem;"><p>No reviews yet. Be the first.</p></div></div>
+      {% endif %}
+    </div>
+    <div>
+      <div class="section-title">{% if my_review %}Your Review{% else %}Write a Review{% endif %}</div>
+      <div class="table-card">
+        <div style="padding:1.25rem;">
+          <form method="POST" action="/review/{{ b.id }}">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token }}"/>
+            <div class="form-group"><label class="form-label">Rating</label>
+              <div class="rating-select" style="flex-direction:row-reverse;justify-content:flex-start;gap:2px;">
+                {% for i in range(5,0,-1) %}
+                <input type="radio" name="rating" id="r{{i}}" value="{{i}}" {% if my_review and my_review.rating==i %}checked{% endif %}>
+                <label for="r{{i}}" style="font-size:1.4rem;">&#9733;</label>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="form-group"><label class="form-label">Comment <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray-300);">(optional)</span></label>
+              <textarea class="form-input" name="comment" rows="4" placeholder="Share your thoughts...">{{ my_review.comment if my_review and my_review.comment else '' }}</textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">{% if my_review %}Update Review{% else %}Submit Review{% endif %}</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

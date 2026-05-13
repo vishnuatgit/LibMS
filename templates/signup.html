@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Create Account — LibMS{% endblock %}
+{% block content %}
+<div class="auth-page">
+  <div class="auth-left">
+    <div class="auth-logo-wrap">
+      
+    </div>
+    <div class="auth-headline">Join the<br><em>LibMS</em></div>
+    <p class="auth-tagline">Create your account and gain access to thousands of books across every discipline.</p>
+    <div class="auth-divider"></div>
+    <div class="auth-features">
+      <div class="auth-feat">
+        <div class="auth-feat-dot"></div>
+        <div><div class="auth-feat-title">Free membership</div><div class="auth-feat-desc">All students and staff are eligible to join at no cost.</div></div>
+      </div>
+      <div class="auth-feat">
+        <div class="auth-feat-dot"></div>
+        <div><div class="auth-feat-title">Ratings and reviews</div><div class="auth-feat-desc">Rate books you have read and help fellow students discover great titles.</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="auth-right">
+    <div class="auth-form-card">
+      <div class="auth-form-title">Create account</div>
+      <p class="auth-form-sub">Register as a new LibMS member</p>
+      <form method="POST">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token }}"/>
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input class="form-input" type="text" name="full_name" placeholder="e.g. Vishnu Kumar" autofocus/>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Username <span style="color:var(--red)">*</span></label>
+            <input class="form-input" type="text" name="username" placeholder="Choose a username" required/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input class="form-input" type="email" name="email" placeholder="you@libms.com"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password <span style="color:var(--red)">*</span></label>
+          <input class="form-input" type="password" name="password" placeholder="Minimum 6 characters" required/>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg btn-full" style="margin-top:.5rem">Create Account</button>
+      </form>
+      <p class="auth-form-footer">Already have an account? <a href="/login">Sign in</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}
