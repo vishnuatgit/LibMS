@@ -26,6 +26,14 @@ Instead of relying solely on SQL queries or heavy external dependencies, I imple
 - **Automated Notifications:** When a reserved book is returned to the library, the system automatically alerts the next person in the priority queue.
 - **Admin Dashboard:** A comprehensive oversight panel for administrators to manage inventory, track active issues, monitor users, and view system health metrics.
 
+## Technologies Used
+
+- **Backend:** Python, Flask
+- **Database:** SQLite
+- **Frontend:** HTML5, CSS3, JavaScript
+- **Deployment:** Docker, Render
+- **Testing:** Pytest
+
 ## Running the Project Locally
 
 The fastest way to spin up the application and its environment is using Docker.
@@ -49,7 +57,7 @@ venv\Scripts\activate
 source venv/bin/activate
 
 # 2. Install dependencies
-pip install -r  requirements.txt
+pip install -r requirements.txt
 
 # 3. Run the server
 python app.py
