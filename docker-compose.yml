@@ -1,11 +1,12 @@
-version: '3.8'
-
 services:
   web:
     build: .
     ports:
-      - "5000:5000"
-    volumes:
-      - .:/app
+      - "8000:8000"
     environment:
-      - FLASK_ENV=development
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env (see .env.example)}
+    volumes:
+      - libms-data:/app/data
+
+volumes:
+  libms-data:

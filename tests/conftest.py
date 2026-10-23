@@ -1,19 +1,20 @@
-import pytest
 import os
 import tempfile
-import sqlite3
-from app import app, init_db
+
+os.environ.setdefault("SECRET_KEY", "test-secret-key")
+os.environ.setdefault("DATABASE_PATH", os.path.join(tempfile.gettempdir(), "libms-import.db"))
+
+import pytest  # noqa: E402
+
+from app import app, init_db  # noqa: E402
+
 
 @pytest.fixture
-def client():
-    # Create a temporary file to isolate the database for each test
-    db_fd, app.config['DATABASE'] = tempfile.mkstemp()
-    app.config['TESTING'] = True
-    
+def client(tmp_path):
+    app.config["DATABASE"] = str(tmp_path / "test.db")
+    app.config["TESTING"] = True
+    app.config["RATELIMIT_ENABLED"] = False
+    with app.app_context():
+        init_db()
     with app.test_client() as client:
-        with app.app_context():
-            init_db()
         yield client
-    
-    os.close(db_fd)
-    os.unlink(app.config['DATABASE'])
