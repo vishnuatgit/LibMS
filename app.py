@@ -36,18 +36,23 @@ from dsa import catalogue_cache, search_trie, recommendation_graph
 load_dotenv()
 
 app = Flask(__name__)
-_sec = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+_sec = os.environ.get("SECRET_KEY")
+if not _sec:
+    if os.environ.get("FLASK_DEBUG", "").lower() in ("1", "true", "yes"):
+        _sec = secrets.token_hex(32)  # development only: sessions reset on restart
+    else:
+        raise RuntimeError("SECRET_KEY is not set. Set it in the environment (see .env.example).")
 app.secret_key = _sec
 app.config.update(
     SESSION_COOKIE_HTTPONLY   = True,
     SESSION_COOKIE_SAMESITE   = "Lax",
-    SESSION_COOKIE_SECURE     = False,
+    SESSION_COOKIE_SECURE     = os.environ.get("SESSION_COOKIE_SECURE", "").lower() in ("1", "true", "yes"),
     PERMANENT_SESSION_LIFETIME = timedelta(hours=8),
 )
 
 limiter = Limiter(get_remote_address, app=app, default_limits=[], storage_uri="memory://")
 
-DB            = "library.db"
+DB            = os.environ.get("DATABASE_PATH", "library.db")
 FINE_PER_DAY  = 5
 BORROW_DAYS   = 14
 MAX_BOOKS     = 5
@@ -69,7 +74,7 @@ COVER_COLORS = [
 
 def get_db():
     if "db" not in g:
-        c = sqlite3.connect(DB)
+        c = sqlite3.connect(app.config.get("DATABASE", DB))
         c.row_factory = sqlite3.Row
         c.execute("PRAGMA foreign_keys = ON")
         c.execute("PRAGMA journal_mode = WAL")
@@ -455,7 +460,9 @@ def _check_pw(pw, hashed):
 def gen_csrf():
     if "_csrf" not in session: session["_csrf"] = secrets.token_hex(24)
     return session["_csrf"]
-def valid_csrf(t): return secrets.compare_digest(session.get("_csrf",""), t or "")
+def valid_csrf(t):
+    expected = session.get("_csrf")
+    return bool(expected and t) and secrets.compare_digest(expected, t)
 def sanitise(t, mx=MAX_TEXT): return bleach.clean(t or "", tags=[], strip=True).strip()[:mx]
 def get_ip(): return (request.headers.get("X-Forwarded-For", request.remote_addr) or "unknown").split(",")[0].strip()
 def validate_username(u):
@@ -1273,12 +1280,13 @@ def admin_acquisition(acq_id, action):
     if action not in ("approve","reject","order"): abort(404)
     db=get_db(); acq=db.execute("SELECT * FROM acquisitions WHERE id=?",(acq_id,)).fetchone()
     if not acq: abort(404)
-    db.execute("UPDATE acquisitions SET status=? WHERE id=?",(action+"d" if action=="reject" else action+"ed",acq_id))
+    new_status = {"approve": "approved", "reject": "rejected", "order": "ordered"}[action]
+    db.execute("UPDATE acquisitions SET status=? WHERE id=?",(new_status,acq_id))
     if acq["user_id"]:
         msgs={"approve":"Your book suggestion has been approved.","reject":"Your book suggestion was not approved at this time.","order":"Your suggested book has been ordered!"}
         notify(db,acq["user_id"],msgs.get(action,""),{"approve":"success","reject":"info","order":"success"}.get(action,"info"))
     log(db,session["uid"],"acquisition_action",f"acq_id:{acq_id} action:{action}"); db.commit()
-    flash(f"Suggestion {action}ed.","success"); return redirect("/admin")
+    flash(f"Suggestion {new_status}.","success"); return redirect("/admin")
 
 @app.route("/admin/notify_user/<int:user_id>", methods=["POST"])
 @login_required
@@ -1333,4 +1341,5 @@ with app.app_context():
     init_db()
 
 if __name__=="__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=os.environ.get("FLASK_DEBUG") == "1", host="127.0.0.1",
+            port=int(os.environ.get("PORT", 5000)))

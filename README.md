@@ -1,79 +1,82 @@
-# LibMS (Library Management System)
+# LibMS
 
-A full-stack library management system I built using Python, Flask, and SQLite. The primary goal of this project was to go beyond standard CRUD applications by integrating custom Data Structures and Algorithms (DSA) from scratch to handle real-world system optimization like caching, fast searching, and recommendation engines.
+A Flask + SQLite library management system with hand-written data structures for caching, autocomplete and recommendations.
 
-## Technical Deep Dive (Custom DSA)
+[![CI](https://github.com/vishnuatgit/LibMS/actions/workflows/ci.yml/badge.svg)](https://github.com/vishnuatgit/LibMS/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-Instead of relying solely on SQL queries or heavy external dependencies, I implemented the following custom features to optimize the application's performance:
+## What it does
 
-- **Custom LRU Cache:** 
-  I built a Hash Map combined with a Doubly Linked List to serve as a caching layer for the catalogue. When users browse frequently accessed books, the data is served from memory in $O(1)$ time, drastically reducing the number of database queries.
+Members sign up, browse and search a seeded catalogue of about 60 titles, borrow and return books, renew once, place holds on titles with no free copy, review books and suggest new acquisitions. Overdue loans accrue a fine of Rs. 5 per day. An admin panel covers active loans (with force return), book add/edit/delete, member ban/unban and notifications, acquisition suggestions and simple circulation reports.
 
-- **Prefix Trie Autocomplete:** 
-  To make the search bar instantly responsive, I implemented an in-memory Prefix Trie. Instead of running expensive SQL `LIKE` queries against the database on every keystroke, the Prefix Trie handles autocomplete suggestions on the backend with $O(L)$ time complexity.
+## Custom data structures (`dsa.py`)
 
-- **Graph-Based Recommendations (BFS):** 
-  The recommendation system uses a custom Adjacency List graph. It performs a Breadth-First Search (BFS) to traverse book metadata (like matching tags and authors) up to two degrees of separation. This provides users with highly accurate, contextual book suggestions based on what they are currently viewing.
+| Structure | Used for | Complexity |
+|---|---|---|
+| LRU cache (hash map + doubly linked list) | Caches book-detail records by id (capacity 200) | `get`/`put` O(1) |
+| Trie over every word-suffix of each title | `/api/autocomplete` on the catalogue search box | lookup O(P) for a prefix of length P; each node keeps up to 6 matches |
+| Weighted adjacency-list graph + BFS (depth 2) | "Related books" on the book page; edges join books that share a tag (weight 1) or an author (weight 2) | O(V + E) per query |
 
-- **Priority Queue Waitlist System:** 
-  The book reservation system operates as a database-backed priority queue. When a book is checked out, users can join the waitlist. High-priority users can dynamically jump ahead in the queue, ensuring the system handles reservations intelligently based on user roles.
+Holds are queued in the database and served by `priority_level`, then placement time. Every member currently gets the default priority, so in practice the queue is first come, first served.
 
-## Core Features
+## Tech stack
 
-- **Authentication & Authorization:** Secure user signup and login with bcrypt password hashing. Differentiates between standard users and system administrators.
-- **Library Catalog Operations:** Users can browse, search, filter, and sort the entire book catalogue seamlessly.
-- **Issue and Return Management:** Robust tracking of book checkouts with a strict 14-day limit. The system automatically handles renewal requests and calculates late fines (₹5/day).
-- **Automated Notifications:** When a reserved book is returned to the library, the system automatically alerts the next person in the priority queue.
-- **Admin Dashboard:** A comprehensive oversight panel for administrators to manage inventory, track active issues, monitor users, and view system health metrics.
+Python, Flask, SQLite (WAL mode), bcrypt, Flask-Limiter, Jinja2 templates with plain CSS/JS, gunicorn, Docker, GitHub Actions.
 
-## Technologies Used
-
-- **Backend:** Python, Flask
-- **Database:** SQLite
-- **Frontend:** HTML5, CSS3, JavaScript
-- **Deployment:** Docker, Render
-- **Testing:** Pytest
-
-## Running the Project Locally
-
-The fastest way to spin up the application and its environment is using Docker.
+## Quick start (local)
 
 ```bash
-docker-compose up --build
-```
-The application will be accessible at `http://localhost:5000`.
-
-### Manual Setup (Without Docker)
-
-If you prefer to run the application directly using Python:
-
-```bash
-# 1. Setup Virtual Environment
-python -m venv venv
-
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
-
-# 2. Install dependencies
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-
-# 3. Run the server
-python app.py
+cp .env.example .env             # FLASK_DEBUG=1 for local development
+flask --app app run              # http://127.0.0.1:5000
 ```
 
-### Default Admin Credentials
+The database is created and the catalogue seeded on first start. A default admin account is created: `admin` / `Admin@123`. Change it before exposing the app anywhere.
 
-If you need administrator access to test the dashboard, you can use these default credentials:
-- **Username:** admin
-- **Password:** Admin@123
+## Quick start (Docker)
 
-## Testing
-
-The repository contains a dedicated test suite that covers the core DSA logic as well as the Flask application routes. The tests are written using `pytest`.
-
-To run the test suite:
 ```bash
-python -m pytest tests/ -v
+cp .env.example .env    # set SECRET_KEY to a long random value
+docker compose up --build    # http://localhost:8000
 ```
+
+The image runs gunicorn as a non-root user with a health check; the SQLite file lives in the `libms-data` volume.
+
+## Configuration
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `SECRET_KEY` | none | Signs session cookies. Required unless `FLASK_DEBUG=1` (then a random key is generated per run). |
+| `FLASK_DEBUG` | unset | `1` enables debug mode for local development. |
+| `DATABASE_PATH` | `library.db` | SQLite file location. |
+| `SESSION_COOKIE_SECURE` | `0` | Set to `1` when served over HTTPS. |
+
+## Running tests
+
+```bash
+pip install -r requirements-dev.txt
+SECRET_KEY=test python -m pytest --cov=app --cov=dsa
+```
+
+Route tests use Flask's test client against a temporary SQLite database.
+
+## Security notes
+
+bcrypt password hashing, CSRF tokens on all POST forms, parameterised SQL, rate-limited login and signup, HTTP-only session cookies. Known gap: borrow, return, renew, hold and several admin actions are still plain GET links; moving them to POST forms is on the roadmap.
+
+## Deployment
+
+`render.yaml` describes a Render web service (generated `SECRET_KEY`, gunicorn start command) and `Procfile` covers Heroku-style hosts. On free tiers the instance sleeps when idle and the SQLite file is reset on redeploy; the app re-creates and re-seeds the catalogue on start.
+
+## Roadmap
+
+- Convert state-changing GET routes to POST with CSRF
+- Split `app.py` into blueprints and add a lint step
+- Admin action to record fine payments
+
+## License
+
+MIT, see [LICENSE](LICENSE).

@@ -1,27 +1,24 @@
-# Use official Python runtime as a parent image
-FROM python:3.10-slim
+FROM python:3.12-slim
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-ENV FLASK_APP=app.py
-ENV FLASK_RUN_HOST=0.0.0.0
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    DATABASE_PATH=/app/data/library.db
 
-# Set work directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends gcc && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
-# Install python dependencies
-COPY requirements.txt /app/
-RUN pip install --upgrade pip && pip install -r requirements.txt
+COPY app.py dsa.py ./
+COPY templates ./templates
+COPY static ./static
 
-# Copy project
-COPY . /app/
+RUN useradd --create-home --uid 10001 libms && mkdir -p /app/data && chown libms:libms /app/data
+USER libms
 
-# Expose port
-EXPOSE 5000
+EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/login', timeout=2)" || exit 1
 
-# Run the application
-CMD ["flask", "run"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "4", "app:app"]
